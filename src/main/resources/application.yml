@@ -1,0 +1,71 @@
+spring:
+  application:
+    name: self-service-backend
+  
+  # Configurações do banco de dados
+  datasource:
+    url: jdbc:postgresql://localhost:5432/postgres
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      connection-timeout: 20000
+      maximum-pool-size: 5
+      minimum-idle: 1
+      idle-timeout: 300000
+      pool-name: SelfServiceHikariPool
+      connection-test-query: SELECT 1
+  
+  # Configurações JPA
+  jpa:
+    database: postgresql
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        jdbc:
+          lob.non_contextual_creation: true
+    generate-ddl: true
+  
+  # Configurações do Flyway
+  flyway:
+    enabled: false
+    baseline-on-migrate: true
+    locations: classpath:db/migration
+
+# Configurações do Swagger/OpenAPI
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    operationsSorter: method
+    tagsSorter: alpha
+    defaultModelsExpandDepth: 1
+    defaultModelExpandDepth: 1
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+  packages-to-scan: com.selfservice
+  paths-to-match: /**
+
+# Configurações da aplicação
+server:
+  port: 8080
+  servlet:
+    context-path: /api
+
+# Configurações de segurança JWT
+security:
+  jwt:
+    secret: ${JWT_SECRET:your-256-bit-secret}
+    expiration: 86400000 # 24 horas em milissegundos
+
+# Configurações de logging
+logging:
+  level:
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    com.zaxxer.hikari: DEBUG
+    org.postgresql: DEBUG 
