@@ -1,7 +1,12 @@
 package com.selfservice.application.controller;
 
+import java.math.BigDecimal;
 import java.util.List;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -11,14 +16,19 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.selfservice.application.dto.common.PageResponseDTO;
+import com.selfservice.application.dto.product.ProductFilterDTO;
 import com.selfservice.application.dto.product.ProductRequestDTO;
 import com.selfservice.application.dto.product.ProductResponseDTO;
+import com.selfservice.domain.entity.Product;
 import com.selfservice.domain.service.ProductService;
 import com.selfservice.infrastructure.mapper.ProductMapper;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -42,6 +52,60 @@ public class ProductController {
             productService.findAll().stream()
                 .map(productMapper::toDTO)
                 .toList()
+        );
+    }
+
+    @GetMapping("/paged")
+    @Operation(summary = "List products with pagination and filters", description = "Returns a filtered and paginated list of products")
+    @ApiResponse(responseCode = "200", description = "Successfully retrieved filtered and paginated list of products")
+    public ResponseEntity<PageResponseDTO<ProductResponseDTO>> findAllPaged(
+            @Parameter(description = "Filtrar por nome do produto")
+            @RequestParam(required = false) String name,
+            
+            @Parameter(description = "Filtrar por descrição do produto")
+            @RequestParam(required = false) String description,
+            
+            @Parameter(description = "Filtrar por preço mínimo")
+            @RequestParam(required = false) BigDecimal minPrice,
+            
+            @Parameter(description = "Filtrar por preço máximo")
+            @RequestParam(required = false) BigDecimal maxPrice,
+            
+            @Parameter(description = "Número da página (começa em 0)", example = "0")
+            @RequestParam(defaultValue = "0") int page,
+            
+            @Parameter(description = "Tamanho da página", example = "10")
+            @RequestParam(defaultValue = "10") int size,
+            
+            @Parameter(description = "Campo para ordenação", example = "name")
+            @RequestParam(defaultValue = "name") String sort,
+            
+            @Parameter(description = "Direção da ordenação (ASC ou DESC)", example = "ASC")
+            @RequestParam(defaultValue = "ASC") String direction) {
+        
+        ProductFilterDTO filter = new ProductFilterDTO();
+        filter.setName(name);
+        filter.setDescription(description);
+        filter.setMinPrice(minPrice);
+        filter.setMaxPrice(maxPrice);
+        
+        Sort.Direction sortDirection = Sort.Direction.fromString(direction.toUpperCase());
+        Pageable pageable = PageRequest.of(page, size, Sort.by(sortDirection, sort));
+        
+        Page<Product> productPage = productService.findAll(filter, pageable);
+        
+        return ResponseEntity.ok(
+            PageResponseDTO.<ProductResponseDTO>builder()
+                .content(productPage.getContent().stream()
+                    .map(productMapper::toDTO)
+                    .toList())
+                .pageNumber(productPage.getNumber())
+                .pageSize(productPage.getSize())
+                .totalElements(productPage.getTotalElements())
+                .totalPages(productPage.getTotalPages())
+                .first(productPage.isFirst())
+                .last(productPage.isLast())
+                .build()
         );
     }
 
