@@ -1,5 +1,7 @@
 package com.selfservice.domain.entity;
 
+import java.math.BigDecimal;
+
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -31,5 +33,5 @@ public class Product {
     @NotNull
     @Positive
     @Schema(description = "Product price", example = "45.90", required = true)
-    private Double price;
+    private BigDecimal price;
 } 

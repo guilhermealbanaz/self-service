@@ -5,6 +5,7 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 
 import com.selfservice.domain.entity.Product;
+import com.selfservice.infrastructure.exception.ResourceNotFoundException;
 import com.selfservice.infrastructure.repository.ProductRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -21,7 +22,7 @@ public class ProductService {
 
     public Product findById(Long id) {
         return productRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Product not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Product", id));
     }
 
     public Product save(Product product) {
