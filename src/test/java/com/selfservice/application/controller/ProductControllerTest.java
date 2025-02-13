@@ -14,16 +14,15 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
-import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -33,11 +32,13 @@ import com.selfservice.domain.entity.Product;
 import com.selfservice.domain.service.ProductService;
 import com.selfservice.infrastructure.exception.ResourceNotFoundException;
 import com.selfservice.infrastructure.mapper.ProductMapper;
-import com.selfservice.infrastructure.config.SecurityConfig;
+import com.selfservice.infrastructure.security.CustomUserDetailsService;
+import com.selfservice.infrastructure.security.JwtAuthenticationFilter;
+import com.selfservice.infrastructure.security.JwtTokenProvider;
 import com.selfservice.application.dto.product.ProductFilterDTO;
 
 @WebMvcTest(ProductController.class)
-@Import(SecurityConfig.class)
+@AutoConfigureMockMvc(addFilters = false)
 class ProductControllerTest {
 
     @Autowired
@@ -51,6 +52,15 @@ class ProductControllerTest {
 
     @MockBean
     private ProductMapper productMapper;
+
+    @MockBean
+    private CustomUserDetailsService userDetailsService;
+
+    @MockBean
+    private JwtTokenProvider jwtTokenProvider;
+
+    @MockBean
+    private JwtAuthenticationFilter jwtAuthenticationFilter;
 
     private Product product;
     private ProductRequestDTO productRequestDTO;
@@ -92,8 +102,7 @@ class ProductControllerTest {
         when(productService.findAll()).thenReturn(productList);
         when(productMapper.toDTO(any(Product.class))).thenReturn(productResponseDTO);
 
-        mockMvc.perform(get("/products")
-                .with(SecurityMockMvcRequestPostProcessors.csrf()))
+        mockMvc.perform(get("/products"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$", hasSize(2)))
@@ -108,8 +117,7 @@ class ProductControllerTest {
         when(productService.findById(1L)).thenReturn(product);
         when(productMapper.toDTO(any(Product.class))).thenReturn(productResponseDTO);
 
-        mockMvc.perform(get("/products/{id}", 1L)
-                .with(SecurityMockMvcRequestPostProcessors.csrf()))
+        mockMvc.perform(get("/products/{id}", 1L))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.id", is(1)))
@@ -122,8 +130,7 @@ class ProductControllerTest {
     void findByIdNotFound() throws Exception {
         when(productService.findById(99L)).thenThrow(new ResourceNotFoundException("Product", 99L));
 
-        mockMvc.perform(get("/products/{id}", 99L)
-                .with(SecurityMockMvcRequestPostProcessors.csrf()))
+        mockMvc.perform(get("/products/{id}", 99L))
                 .andExpect(status().isNotFound());
     }
 
@@ -136,7 +143,6 @@ class ProductControllerTest {
         when(productMapper.toDTO(any(Product.class))).thenReturn(productResponseDTO);
 
         mockMvc.perform(post("/products")
-                .with(SecurityMockMvcRequestPostProcessors.csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(productRequestDTO)))
                 .andExpect(status().isCreated())
@@ -152,7 +158,6 @@ class ProductControllerTest {
         ProductRequestDTO invalidProduct = new ProductRequestDTO();
 
         mockMvc.perform(post("/products")
-                .with(SecurityMockMvcRequestPostProcessors.csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(invalidProduct)))
                 .andExpect(status().isBadRequest());
@@ -167,7 +172,6 @@ class ProductControllerTest {
         when(productMapper.toDTO(any(Product.class))).thenReturn(productResponseDTO);
 
         mockMvc.perform(put("/products/{id}", 1L)
-                .with(SecurityMockMvcRequestPostProcessors.csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(productRequestDTO)))
                 .andExpect(status().isOk())
@@ -185,7 +189,6 @@ class ProductControllerTest {
                 .thenThrow(new ResourceNotFoundException("Product", 99L));
 
         mockMvc.perform(put("/products/{id}", 99L)
-                .with(SecurityMockMvcRequestPostProcessors.csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(productRequestDTO)))
                 .andExpect(status().isNotFound());
@@ -197,8 +200,7 @@ class ProductControllerTest {
     void deleteProduct() throws Exception {
         doNothing().when(productService).delete(1L);
 
-        mockMvc.perform(delete("/products/{id}", 1L)
-                .with(SecurityMockMvcRequestPostProcessors.csrf()))
+        mockMvc.perform(delete("/products/{id}", 1L))
                 .andExpect(status().isNoContent());
     }
 
@@ -209,8 +211,7 @@ class ProductControllerTest {
         doThrow(new ResourceNotFoundException("Product", 99L))
                 .when(productService).delete(99L);
 
-        mockMvc.perform(delete("/products/{id}", 99L)
-                .with(SecurityMockMvcRequestPostProcessors.csrf()))
+        mockMvc.perform(delete("/products/{id}", 99L))
                 .andExpect(status().isNotFound());
     }
 
@@ -224,7 +225,6 @@ class ProductControllerTest {
         when(productMapper.toDTO(any(Product.class))).thenReturn(productResponseDTO);
 
         mockMvc.perform(get("/products/paged")
-                .with(SecurityMockMvcRequestPostProcessors.csrf())
                 .param("page", "0")
                 .param("size", "10")
                 .param("sort", "name")
